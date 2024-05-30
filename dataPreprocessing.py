@@ -1,6 +1,7 @@
 import pandas as pd
 import os.path
 from sklearn.impute import KNNImputer
+from sklearn import preprocessing
 
 def importData(fname):
     if(os.path.isfile(fname)):
@@ -9,10 +10,10 @@ def importData(fname):
         raise Exception("No file was found or was invalid. Please check root folder and arguments.") 
     
 def showNaN(data,verbose):
-    print("Columns with missing values: %i" % data.isna().shape[1])
+    print("Columns with missing values: %i" % data.isna().any(axis=0).sum())
     if(verbose):
         print( data.isna().sum().where(lambda x : x!=0.00).dropna().to_string())
-    print("Rows with missing data: %i" % data.isna().shape[1])
+    print("Rows with missing data: %i" % data.isna().any(axis=1).sum())
     if(verbose):
         nanSeriesRows = data.isna().sum(axis=1)
         print(nanSeriesRows.groupby(nanSeriesRows).size().where(lambda x : x!=0.00).dropna().to_string())
@@ -28,3 +29,7 @@ def fixNaN(data,verbose,n):
     nan_df = imputer.fit_transform(nan_array)
     nan_df.columns = nan_columns
     return data.fillna(nan_df)
+
+def normalizeDf(data):
+    d = preprocessing.normalize(data, axis=0)
+    return pd.DataFrame(d, columns=data.columns)

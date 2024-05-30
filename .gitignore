@@ -2,4 +2,5 @@ Data.xlsx
 Istruzioni.pdf
 /.venv
 /__pycache__
+/.cache
 .~lock.Data.xlsx#
