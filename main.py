@@ -1,17 +1,20 @@
 from datetime import date
 import os
 import json
+import numpy as np
 import pandas as pd
 import dataPreprocessing as dp
+import classification as cl
 import sys
 import argparse
 
-lastProcess = ['uncached','fix','normalisation']
+lastProcess = ['uncached','fix','normalisation','feature_selection']
 cachePath  = '.cache'
 
-def saveFileToCache(df,fname,args,curProcess):
+def saveFileToCache(df,args,curProcess):
+    print('saving results to cache...')
     #We make any cache element be useful if they share parameters and dataset
-    fname = os.path.splitext(fname)[0]
+    fname = os.path.splitext(args.fname)[0]
     fname += args.__str__()
     #we make sure .cache exists and if not we create it
     os.makedirs(cachePath, exist_ok=True) 
@@ -53,10 +56,14 @@ def main():
                     prog='Progetto FIA Singolo 2024',
                     description='Receives a dataset of patients of "neoplasia maligna" and it predicts if the next sample will be "Recidiva"',
                     epilog='by Pablo Tores Rodriguez')
-    parser.add_argument('-f ',  '--filename',     type=str, default='Data.xlsx')           # positional argument
-    parser.add_argument('-n',   '--neighbours',   type=int, default=2)      # option that takes a value
-    parser.add_argument('-v',   '--verbose',      action='store_true')  # on/off flag
-    parser.add_argument('-c',   '--cache',      action='store_true')
+    parser.add_argument('-f ',  '--filename',      type=str, default='Data.xlsx')           # positional argument
+    parser.add_argument('-n',   '--neighbours',    type=int, default=2)      # option that takes a value
+    parser.add_argument('-ts',  '--testsize',      type=float, default=0.2)
+    parser.add_argument('-m',   '--model',         type=str, default='knn')
+    parser.add_argument('-r',   '--regularisation',type=float, default=1.0)
+    parser.add_argument('-p',   '--penalty',       type=str, default=None)
+    parser.add_argument('-v',   '--verbose',       action='store_true')  # on/off flag
+    parser.add_argument('-c',   '--cache',         action='store_true')
     args = parser.parse_args()
 
     #We check for a cached dataset
@@ -72,8 +79,8 @@ def main():
         print("Rows: %i" % df.shape[0])
 
         #We drop the solution and index column as it would render the NaN analysis inaccurate
-        sol_df = df['Recidiva/Non_Recidiva']
-        index = df['ID']
+        sol_df = df[['Recidiva/Non_Recidiva']]
+
         df = df.drop(columns=['Recidiva/Non_Recidiva','ID'])
     else:
         print('skipping import...')
@@ -84,8 +91,7 @@ def main():
         print("fixing missing data...")
         df = dp.fixNaN(df,args.verbose,args.neighbours)
         if(args.cache):
-            print('saving results to cache...')
-            saveFileToCache(df,args.filename,args,lastProcess[1])
+            saveFileToCache(df,args,lastProcess[1])
         print("checking missing data...")
         dp.showNaN(df,args.verbose)
     else:
@@ -95,10 +101,26 @@ def main():
         print("normalising dataset...")
         df = dp.normalizeDf(df)
         if(args.cache):
-            print('saving results to cache...')
-            saveFileToCache(df,args.filename,args,lastProcess[2])
+            saveFileToCache(df,args,lastProcess[2])
     else:
         print('skipping normalisation...')
+    
+    #We proceed to create a new dataframe with only label data to correct assess which features are more relevant
+    if(lastProcess.index(cachedProc) < 3):
+        print("feature selection in progress...")
+        dp.featureSelection(df,sol_df,0.05)
+        if(args.cache):
+            saveFileToCache(df,args,lastProcess[2])
+    else:
+        print('skipping feature selection...')
+    
+    res_df = cl.classify(df,sol_df,args)
+    
+    
+
+    
+
+    
 
 if __name__ == "__main__":
     main()

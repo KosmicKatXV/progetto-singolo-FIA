@@ -1,7 +1,9 @@
 import pandas as pd
+import numpy as np
 import os.path
 from sklearn.impute import KNNImputer
 from sklearn import preprocessing
+import statsmodels.api as smf
 
 def importData(fname):
     if(os.path.isfile(fname)):
@@ -33,3 +35,10 @@ def fixNaN(data,verbose,n):
 def normalizeDf(data):
     d = preprocessing.normalize(data, axis=0)
     return pd.DataFrame(d, columns=data.columns)
+
+def getLabeled(data,solData):
+    data['Recidiva/Non_Recidiva'] = solData['Recidiva/Non_Recidiva']
+    return data.dropna(axis=0).drop(columns=['Recidiva/Non_Recidiva']),solData.dropna(axis=0)
+
+def featureSelection(x,y,p):
+    return x,y

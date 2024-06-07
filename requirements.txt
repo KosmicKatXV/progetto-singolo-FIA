@@ -2,3 +2,5 @@ pandas
 openpyxl
 scikit-learn
 argparse
+matplotlib
+stasmodels
