@@ -3,52 +3,12 @@ import os
 import json
 import numpy as np
 import pandas as pd
+from cache import getProcessList, loadFileFromDataset, saveFileToCache
 import dataPreprocessing as dp
 import classification as cl
+import evaluation as ev
 import sys
 import argparse
-
-lastProcess = ['uncached','fix','normalisation','feature_selection']
-cachePath  = '.cache'
-
-def saveFileToCache(df,args,curProcess):
-    print('saving results to cache...')
-    #We make any cache element be useful if they share parameters and dataset
-    fname = os.path.splitext(args.fname)[0]
-    fname += args.__str__()
-    #we make sure .cache exists and if not we create it
-    os.makedirs(cachePath, exist_ok=True) 
-    #we save the current iteration of the file
-    df.to_excel(cachePath+'/'+fname+'.xlsx')
-    #we read the old data
-    jsonfname = cachePath+'/'+fname+'.json'
-    if(os.path.isfile(jsonfname)):
-        with open(jsonfname, "r") as jsonFile:
-            data = json.load(jsonFile)
-            #we check that it is coherent
-            if(lastProcess.index(curProcess) - lastProcess.index(data['lastProc']) != 1):raise Exception('the cache is invalid')
-            #if(data['time'] > date.today()): raise Exception('date is incoherent')
-    else:
-        data = {'lastProc':'uncached'}
-
-    #We insert new data
-    #data['time'] = date.today()
-    data['lastProc'] = curProcess
-    #we update the json file
-    with open(jsonfname, "w") as jsonFile:
-        json.dump(data,jsonFile)
-
-def loadFileFromDataset(fname,args):
-    fname = os.path.splitext(fname)[0]
-    fname += args.__str__()
-    jsonfname = cachePath+'/'+fname+'.json'
-    if(os.path.exists(cachePath)):
-        print(cachePath+'/'+fname+'.xlsx')
-        if(os.path.isfile(cachePath+'/'+fname+'.xlsx') and os.path.isfile(jsonfname)):
-            with open(jsonfname, "r") as jsonFile:
-                data = json.load(jsonFile)
-            return data['lastProc'],pd.read_excel(cachePath+'/'+fname+'.xlsx')
-    return 'uncached',pd.DataFrame([])
 
 def main():
 
@@ -56,71 +16,79 @@ def main():
                     prog='Progetto FIA Singolo 2024',
                     description='Receives a dataset of patients of "neoplasia maligna" and it predicts if the next sample will be "Recidiva"',
                     epilog='by Pablo Tores Rodriguez')
-    parser.add_argument('-f ',  '--filename',      type=str, default='Data.xlsx')           # positional argument
-    parser.add_argument('-n',   '--neighbours',    type=int, default=2)      # option that takes a value
-    parser.add_argument('-ts',  '--testsize',      type=float, default=0.2)
-    parser.add_argument('-m',   '--model',         type=str, default='knn')
-    parser.add_argument('-r',   '--regularisation',type=float, default=1.0)
-    parser.add_argument('-p',   '--penalty',       type=str, default=None)
+    parser.add_argument('-f ',  '--filename',      type=str,    default='Data.xlsx')           # positional argument
+    parser.add_argument('-n',   '--neighbours',    type=int,    default=2)      # option that takes a value
+    parser.add_argument('-ts',  '--testsize',      type=float,  default=0.2)
+    parser.add_argument('-m',   '--model',         type=str,    default='knn')
+    parser.add_argument('-r',   '--regularisation',type=float,  default=1.0)
+    parser.add_argument('-p',   '--penalty',       type=str,    default=None)
+    parser.add_argument('-o',   '--output',        type=str,    default='results/')
     parser.add_argument('-v',   '--verbose',       action='store_true')  # on/off flag
     parser.add_argument('-c',   '--cache',         action='store_true')
     args = parser.parse_args()
 
+    lastProcess = getProcessList()
+
     #We check for a cached dataset
     if(args.cache):
-        cachedProc,df = loadFileFromDataset(args.filename,args)
+        cachedProc,df = loadFileFromDataset("df",args)
+        _,df_sol = loadFileFromDataset("df_sol",args)
     else:
         cachedProc = 'uncached'
 
     if(lastProcess.index(cachedProc) == 0):
-        print("importing dataset...")
+        if(args.verbose): print("importing dataset...")
         df = dp.importData(args.filename)
-        print("Columns: %i" % len(df.columns))
-        print("Rows: %i" % df.shape[0])
+        if(args.verbose):
+            print("Columns: %i" % len(df.columns))
+            print("Rows: %i" % df.shape[0])
 
         #We drop the solution and index column as it would render the NaN analysis inaccurate
         sol_df = df[['Recidiva/Non_Recidiva']]
-
         df = df.drop(columns=['Recidiva/Non_Recidiva','ID'])
     else:
-        print('skipping import...')
+        if(args.verbose): print('skipping import...')
 
     if(lastProcess.index(cachedProc) < 1):
-        print("checking missing data...")
-        dp.showNaN(df,args.verbose)
-        print("fixing missing data...")
+        if(args.verbose):
+            print("checking missing data...")
+            dp.showNaN(df)
+            print("fixing missing data...")
         df = dp.fixNaN(df,args.verbose,args.neighbours)
         if(args.cache):
-            saveFileToCache(df,args,lastProcess[1])
-        print("checking missing data...")
-        dp.showNaN(df,args.verbose)
+            saveFileToCache(df,args,lastProcess[1],"df")
+            saveFileToCache(df_sol,args,lastProcess[1],"df_sol")
+        if(args.verbose):
+            print("checking missing data...")
+            dp.showNaN(df)
     else:
-        print('skipping NaN analysis and correction...')
+        if(args.verbose): print('skipping NaN analysis and correction...')
 
     if(lastProcess.index(cachedProc) < 2):
-        print("normalising dataset...")
+        if(args.verbose): print("normalising dataset...")
         df = dp.normalizeDf(df)
         if(args.cache):
-            saveFileToCache(df,args,lastProcess[2])
+            saveFileToCache(df,args,lastProcess[2],"df")
     else:
-        print('skipping normalisation...')
+        if(args.verbose): print('skipping normalisation...')
     
     #We proceed to create a new dataframe with only label data to correct assess which features are more relevant
     if(lastProcess.index(cachedProc) < 3):
-        print("feature selection in progress...")
-        dp.featureSelection(df,sol_df,0.05)
+        if(args.verbose): print("feature selection in progress...")
+        x,y = dp.featureSelection(df,sol_df,0.05)
         if(args.cache):
-            saveFileToCache(df,args,lastProcess[2])
+            saveFileToCache(df,args,lastProcess[3],"df")
     else:
-        print('skipping feature selection...')
+        if(args.verbose): print('skipping feature selection...')
     
-    res_df = cl.classify(df,sol_df,args)
-    
-    
+    if(args.verbose): print("data classification in progress...")
+    y_test,y_pred = cl.classify(df,sol_df,args)
 
-    
+    if(args.verbose): print("data evaluation in progress...")
+    rep = ev.report(y_test,y_pred,args.verbose)
 
-    
+    if(args.verbose): print('saving results to %s...' % args.output)
+    ev.save(rep,args)
 
 if __name__ == "__main__":
     main()

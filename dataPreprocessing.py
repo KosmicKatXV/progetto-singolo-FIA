@@ -11,14 +11,12 @@ def importData(fname):
     else:
         raise Exception("No file was found or was invalid. Please check root folder and arguments.") 
     
-def showNaN(data,verbose):
+def showNaN(data):
     print("Columns with missing values: %i" % data.isna().any(axis=0).sum())
-    if(verbose):
-        print( data.isna().sum().where(lambda x : x!=0.00).dropna().to_string())
+    print( data.isna().sum().where(lambda x : x!=0.00).dropna().to_string())
     print("Rows with missing data: %i" % data.isna().any(axis=1).sum())
-    if(verbose):
-        nanSeriesRows = data.isna().sum(axis=1)
-        print(nanSeriesRows.groupby(nanSeriesRows).size().where(lambda x : x!=0.00).dropna().to_string())
+    nanSeriesRows = data.isna().sum(axis=1)
+    print(nanSeriesRows.groupby(nanSeriesRows).size().where(lambda x : x!=0.00).dropna().to_string())
 
 def fixNaN(data,verbose,n):
     nan_columns = data.isna().columns
