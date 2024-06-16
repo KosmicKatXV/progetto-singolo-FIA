@@ -7,7 +7,6 @@ from sklearn.metrics import classification_report
 target_names = ['Recidiva', 'Non recidiva']
 
 def report(y_true,y_pred,v):
-    #We divide cm in several variables for clarity
     output = classification_report(y_true, y_pred, target_names=target_names,output_dict=True)
     if(v): print(classification_report(y_true, y_pred, target_names=target_names))
     return output

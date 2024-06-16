@@ -24,7 +24,7 @@ def main():
     parser.add_argument('-p',   '--penalty',       type=str,    default=None)
     parser.add_argument('-o',   '--output',        type=str,    default='results/')
     parser.add_argument('-v',   '--verbose',       action='store_true')  # on/off flag
-    parser.add_argument('-c',   '--cache',         action='store_false')
+    parser.add_argument('-c',   '--cache',         action='store_true')
     args = parser.parse_args()
 
     lastProcess = getProcessList()
@@ -91,7 +91,7 @@ def main():
     ev.save(rep,args)
 
     if(args.cache):
-        cachedProc,df = removeFileFromDataset("df",args)
-        _,sol_df = removeFileFromDataset("sol_df",args)
+        removeFileFromDataset("df",args)
+        removeFileFromDataset("sol_df",args)
 if __name__ == "__main__":
     main()
