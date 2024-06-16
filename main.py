@@ -3,7 +3,7 @@ import os
 import json
 import numpy as np
 import pandas as pd
-from cache import getProcessList, loadFileFromDataset, saveFileToCache
+from cache import getProcessList, loadFileFromDataset, saveFileToCache, removeFileFromDataset
 import dataPreprocessing as dp
 import classification as cl
 import evaluation as ev
@@ -24,7 +24,7 @@ def main():
     parser.add_argument('-p',   '--penalty',       type=str,    default=None)
     parser.add_argument('-o',   '--output',        type=str,    default='results/')
     parser.add_argument('-v',   '--verbose',       action='store_true')  # on/off flag
-    parser.add_argument('-c',   '--cache',         action='store_true')
+    parser.add_argument('-c',   '--cache',         action='store_false')
     args = parser.parse_args()
 
     lastProcess = getProcessList()
@@ -32,7 +32,7 @@ def main():
     #We check for a cached dataset
     if(args.cache):
         cachedProc,df = loadFileFromDataset("df",args)
-        _,df_sol = loadFileFromDataset("df_sol",args)
+        _,sol_df = loadFileFromDataset("sol_df",args)
     else:
         cachedProc = 'uncached'
 
@@ -57,7 +57,7 @@ def main():
         df = dp.fixNaN(df,args.verbose,args.neighbours)
         if(args.cache):
             saveFileToCache(df,args,lastProcess[1],"df")
-            saveFileToCache(df_sol,args,lastProcess[1],"df_sol")
+            saveFileToCache(sol_df,args,lastProcess[1],"sol_df")
         if(args.verbose):
             print("checking missing data...")
             dp.showNaN(df)
@@ -90,5 +90,8 @@ def main():
     if(args.verbose): print('saving results to %s...' % args.output)
     ev.save(rep,args)
 
+    if(args.cache):
+        cachedProc,df = removeFileFromDataset("df",args)
+        _,sol_df = removeFileFromDataset("sol_df",args)
 if __name__ == "__main__":
     main()

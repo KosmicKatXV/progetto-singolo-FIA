@@ -15,7 +15,7 @@ def saveFileToCache(df,args,curProcess,dfName):
     #we make sure .cache exists and if not we create it
     os.makedirs(cachePath, exist_ok=True) 
     #we save the current iteration of the file
-    df.to_excel(cachePath+'/'+fname+'.xlsx')
+    df.to_excel(cachePath+'/'+fname+'.xlsx',index=False)
     #we read the old data
     jsonfname = cachePath+'/'+fname+'.json'
     if(os.path.isfile(jsonfname)):
@@ -39,12 +39,19 @@ def loadFileFromDataset(dfName,args):
     fname += hashlib.sha256((args.__str__()+os.path.splitext(args.filename)[0]).encode('ascii')).hexdigest()
     jsonfname = cachePath+'/'+fname+'.json'
     if(os.path.exists(cachePath)):
-        print(cachePath+'/'+fname+'.xlsx')
         if(os.path.isfile(cachePath+'/'+fname+'.xlsx') and os.path.isfile(jsonfname)):
             with open(jsonfname, "r") as jsonFile:
                 data = json.load(jsonFile)
             return data['lastProc'],pd.read_excel(cachePath+'/'+fname+'.xlsx')
     return 'uncached',pd.DataFrame([])
 
+def removeFileFromDataset(dfName,args):
+    fname = dfName
+    fname += hashlib.sha256((args.__str__()+os.path.splitext(args.filename)[0]).encode('ascii')).hexdigest()
+    jsonfname = cachePath+'/'+fname+'.json'
+    if(os.path.exists(cachePath)):
+        if(os.path.isfile(cachePath+'/'+fname+'.xlsx') and os.path.isfile(jsonfname)):
+            os.remove(jsonfname)
+            os.remove(cachePath+'/'+fname+'.xlsx')
 def getProcessList():
     return lastProcess
