@@ -10,6 +10,13 @@ import evaluation as ev
 import sys
 import argparse
 
+def checkArguments(a):
+    if (a.neighbours < 1): raise Exception("Neighbours' number too low")
+    if (0 >= a.testsize or a.testsize >= 1): raise Exception("Test size must be a percentage")
+    if (not a.model in {'knn','svm','lr'}): raise Exception("Not a valid model")
+    if (a.regularisation <= 0): raise Exception("Regularisation value too low")
+    if (not a.penalty in {'l2','l1','elasticnet',None}): raise Exception("Not a valid penalty")
+
 def main():
 
     parser = argparse.ArgumentParser(
@@ -21,13 +28,15 @@ def main():
     parser.add_argument('-ts',  '--testsize',      type=float,  default=0.2)
     parser.add_argument('-m',   '--model',         type=str,    default='knn')
     parser.add_argument('-r',   '--regularisation',type=float,  default=1.0)
-    parser.add_argument('-p',   '--penalty',       type=str,    default=None)
+    parser.add_argument('-p',   '--penalty',       type=str,    default='l2')
     parser.add_argument('-o',   '--output',        type=str,    default='results/')
     parser.add_argument('-v',   '--verbose',       action='store_true')  # on/off flag
     parser.add_argument('-c',   '--cache',         action='store_true')
     args = parser.parse_args()
 
     lastProcess = getProcessList()
+
+    checkArguments(args)
 
     #We check for a cached dataset
     if(args.cache):

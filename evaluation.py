@@ -14,6 +14,7 @@ def report(y_true,y_pred,v):
 def save(report,args):
     #We make any cache element be useful if they share parameters and dataset
     fname = os.path.splitext(args.filename)[0]
+    fname += '_'+date.today().__str__()+'_'
     fname += hashlib.sha256(args.__str__().encode('ascii')).hexdigest()
     #we make sure .cache exists and if not we create it
     os.makedirs(args.output, exist_ok=True) 
